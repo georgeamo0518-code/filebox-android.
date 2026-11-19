@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- All-files access means any path on shared storage can be opened or shared. -->
+    <root-path name="root" path="." />
+</paths>
