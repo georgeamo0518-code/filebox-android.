@@ -1,0 +1,57 @@
+feature,area,priority,original,clone,notes
+Request All files access with explainer screen,onboarding,must,yes,no,S02; legacy permission on Android 10 and below
+Home storage usage card (used/total),home,must,yes,no,S01
+Category tiles with counts (images video audio docs apks downloads archives),home,must,yes,no,S01 S04
+Recent files list,home,must,yes,no,S01 S05
+Browse folders with breadcrumb navigation,browser,must,yes,no,S03
+List and grid view,browser,must,yes,no,S17
+Sort by name date size type,browser,must,yes,no,S17
+Image and video thumbnails,browser,must,yes,no,file row
+Empty folder and empty category states,browser,must,yes,no,S03 S04
+Open file with default or chosen app,browser,must,yes,no,F02 via FileProvider intent
+Long-press multi-select with select all,operations,must,yes,no,S07
+Copy files and folders,operations,must,yes,no,F03 S08 S09
+Move files and folders,operations,must,yes,no,F04
+Rename file or folder,operations,must,yes,no,F05 S10
+Delete with confirmation,operations,must,yes,no,F06 S12
+Create new folder,operations,must,yes,no,F08
+Progress for long operations with cancel,operations,must,yes,no,S09 foreground notification
+Name conflict dialog (skip replace keep both),operations,must,yes,no,S09
+Share files via Android share sheet,operations,must,yes,no,F09
+Search by file name,search,must,yes,no,S06
+Notify MediaStore after file changes,platform,must,yes,no,so other apps see changes
+Properties sheet (path size date count),operations,must,yes,no,S11
+Search filters by type size and date,search,should,yes,no,S06 chips
+Favourites / bookmarks for folders and files,favourites,should,yes,no,F10 S13
+Hide files and hidden files manager,privacy,should,yes,no,F11 S14; verify the method
+Show hidden files toggle,settings,should,yes,no,S17 S18
+SD card and USB drive access via SAF,storage,should,yes,no,F13 S19
+Navigation drawer with volumes,navigation,should,yes,no,S16
+Create new text file,operations,should,yes,no,S10
+Undo snackbar after delete,operations,should,unconfirmed,no,improvement if the original lacks it
+Recycle bin with restore and empty,operations,should,unconfirmed,no,S15; not confirmed in public sources
+Dark theme,settings,should,unconfirmed,no,S18
+Settings screen,settings,should,yes,no,S18
+APK info sheet and install,apps,should,yes,no,F14 S20
+Add folder shortcut to launcher,operations,could,yes,no,pinned shortcut API
+Folder size computed in list,browser,could,yes,no,async
+Recent search queries,search,could,unconfirmed,no,S06
+Per-folder view and sort memory,browser,could,unconfirmed,no,verify
+Batch rename,operations,could,unconfirmed,no,verify
+Storage near-full warning,home,could,unconfirmed,no,improvement
+Cloud drives (Drive Dropbox OneDrive Yandex MEGA Box NextCloud),remote,could,yes,skip,outside chosen slice
+Network storage (FTP FTPS SFTP WebDAV SMB NAS),remote,could,yes,skip,outside chosen slice
+PC file access,remote,could,yes,skip,outside chosen slice
+Compress and extract archives (zip rar 7z tar etc),archives,could,yes,skip,outside chosen slice
+Browse zip as folder,archives,could,yes,skip,outside chosen slice
+128-bit file encryption,security,could,yes,skip,outside chosen slice
+Disk analyzer and large files,analysis,could,yes,skip,outside chosen slice
+Junk cleaner (caches leftovers empty folders),cleanup,could,yes,skip,outside chosen slice
+Duplicate and similar image finder,cleanup,could,yes,skip,outside chosen slice
+Office and PDF and ebook viewers,viewers,could,yes,skip,outside chosen slice; use system apps
+Video player with PiP and Chromecast,media,could,yes,skip,outside chosen slice
+Music player with playlists,media,could,yes,skip,outside chosen slice
+Text and code editor with syntax highlighting,editor,could,yes,skip,outside chosen slice
+XAPK and APKS split installs,apps,could,yes,skip,outside chosen slice
+Ads and ad mediation,monetisation,could,yes,skip,not wanted for a personal build; partner deals
+EX File Manager name icon and copy,brand,could,yes,skip,trademark; use your own brand

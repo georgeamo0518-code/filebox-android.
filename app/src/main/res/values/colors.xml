@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors tokens.json color.light.bg / accent, for the window and launcher icon only. -->
+    <color name="window_bg">#FCFCFD</color>
+    <color name="icon_bg">#3B5BDB</color>
+    <color name="icon_fg">#FFFFFF</color>
+</resources>
