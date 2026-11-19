@@ -2,14 +2,18 @@ package dev.yourname.filebox.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.yourname.filebox.domain.FileCategory
 import dev.yourname.filebox.domain.FileEntry
+import dev.yourname.filebox.domain.FileKind
 import dev.yourname.filebox.domain.Format
 import dev.yourname.filebox.domain.StorageVolume
 import dev.yourname.filebox.ui.theme.FileboxTheme
@@ -22,27 +26,53 @@ fun StorageCard(
 ) {
     val total = volumes.sumOf { it.totalBytes }
     val used = total - volumes.sumOf { it.freeBytes }
+    val fraction = if (total > 0) (used.toFloat() / total).coerceIn(0f, 1f) else 0f
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(22.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Storage", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = if (total > 0) used.toFloat() / total else 0f,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("${Format.bytes(used)} used", style = MaterialTheme.typography.bodyMedium)
-                Text("${Format.bytes(total)} total", style = MaterialTheme.typography.bodyMedium)
+                modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                        Icon(Icons.Filled.Storage, contentDescription = null,
+                            modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    Column {
+                        Text("Armazenamento interno", style = MaterialTheme.typography.titleSmall)
+                        Text("Visão geral do espaço", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Icon(Icons.Filled.ChevronRight, contentDescription = "Abrir armazenamento",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(Format.bytes(used), style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.width(6.dp))
+                Text("de ${Format.bytes(total)}", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+                color = if (fraction >= .9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("${(fraction * 100).toInt()}% utilizado", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${Format.bytes((total - used).coerceAtLeast(0))} livres",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -55,29 +85,38 @@ fun CategoryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val themeCategory = when (cat) {
-        FileCategory.Images -> dev.yourname.filebox.ui.theme.Category.Images
-        FileCategory.Video -> dev.yourname.filebox.ui.theme.Category.Video
-        FileCategory.Audio -> dev.yourname.filebox.ui.theme.Category.Audio
-        FileCategory.Docs -> dev.yourname.filebox.ui.theme.Category.Docs
-        FileCategory.Apks -> dev.yourname.filebox.ui.theme.Category.Apk
-        FileCategory.Downloads -> dev.yourname.filebox.ui.theme.Category.Downloads
-        FileCategory.Archives -> dev.yourname.filebox.ui.theme.Category.Archives
+    val (icon, label, category) = when (cat) {
+        FileCategory.Images -> Triple(Icons.Filled.Image, "Imagens", dev.yourname.filebox.ui.theme.Category.Images)
+        FileCategory.Video -> Triple(Icons.Filled.Videocam, "Vídeos", dev.yourname.filebox.ui.theme.Category.Video)
+        FileCategory.Audio -> Triple(Icons.Filled.MusicNote, "Áudios", dev.yourname.filebox.ui.theme.Category.Audio)
+        FileCategory.Docs -> Triple(Icons.Filled.Description, "Documentos", dev.yourname.filebox.ui.theme.Category.Docs)
+        FileCategory.Apks -> Triple(Icons.Filled.Android, "APKs", dev.yourname.filebox.ui.theme.Category.Apk)
+        FileCategory.Downloads -> Triple(Icons.Filled.Download, "Downloads", dev.yourname.filebox.ui.theme.Category.Downloads)
+        FileCategory.Archives -> Triple(Icons.Filled.FolderZip, "Arquivos", dev.yourname.filebox.ui.theme.Category.Archives)
     }
-    val colors = FileboxTheme.extended.category[themeCategory]
+    val colors = FileboxTheme.extended.category[category]
     Card(
         onClick = onClick,
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(0.dp),
-        colors = CardDefaults.cardColors(containerColor = colors?.container ?: MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.heightIn(min = 104.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(18.dp),
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Text(cat.name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(shape = RoundedCornerShape(14.dp),
+                color = colors?.container ?: MaterialTheme.colorScheme.primaryContainer) {
+                Icon(icon, contentDescription = null,
+                    modifier = Modifier.padding(10.dp).size(22.dp),
+                    tint = colors?.icon ?: MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            Text(count.toString(), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -88,17 +127,38 @@ fun FileRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val (icon, tint, bg) = when (entry.kind) {
+        FileKind.Folder -> Triple(Icons.Filled.Folder, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+        FileKind.Image -> Triple(Icons.Filled.Image, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.tertiaryContainer)
+        FileKind.Video -> Triple(Icons.Filled.PlayCircle, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.tertiaryContainer)
+        FileKind.Audio -> Triple(Icons.Filled.MusicNote, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.secondaryContainer)
+        FileKind.Doc -> Triple(Icons.Filled.Description, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+        FileKind.Apk -> Triple(Icons.Filled.Android, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+        FileKind.Archive -> Triple(Icons.Filled.FolderZip, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.secondaryContainer)
+        FileKind.Other -> Triple(Icons.Filled.InsertDriveFile, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.surfaceContainer)
+    }
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(14.dp),
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("${Format.bytes(entry.size)} • ${Format.shortDate(entry.modifiedAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(11.dp), color = bg) {
+                Icon(icon, contentDescription = null, modifier = Modifier.padding(10.dp).size(22.dp), tint = tint)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis)
+                Text(if (entry.isDir) "Pasta" else "${Format.bytes(entry.size)} • ${Format.shortDate(entry.modifiedAt)}",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1)
+            }
+            Icon(Icons.Filled.MoreHoriz, contentDescription = "Mais opções",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -111,17 +171,28 @@ fun BreadcrumbBar(
 ) {
     Row(modifier = modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
         breadcrumbs.forEachIndexed { i, crumb ->
-            TextButton(onClick = { onCrumbClick(i) }) {
-                Text(crumb, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            TextButton(onClick = { onCrumbClick(i) }, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text(crumb, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
             }
-            if (i < breadcrumbs.size - 1) { Text("/", style = MaterialTheme.typography.labelSmall) }
+            if (i < breadcrumbs.size - 1) {
+                Icon(Icons.Filled.ChevronRight, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
 @Composable
 fun EmptyState(message: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(modifier = modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+            Icon(Icons.Filled.FolderOpen, contentDescription = null,
+                modifier = Modifier.padding(20.dp).size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(message, style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
