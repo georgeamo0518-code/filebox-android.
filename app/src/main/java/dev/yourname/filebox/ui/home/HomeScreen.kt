@@ -163,6 +163,7 @@ fun BrowserScreen(
     onOpenFile: (dev.yourname.filebox.domain.FileEntry) -> Unit,
     category: FileCategory? = null,
     searchQuery: String? = null,
+    onCompressFolder: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val vm = remember(initial) { BrowserViewModel(container, initial) }
@@ -178,9 +179,15 @@ fun BrowserScreen(
     val shownEntries = filteredEntries ?: entries
     val error by vm.error.collectAsState()
     val crumbs = vm.crumbs()
+    val currentPath by vm.path.collectAsState()
 
     Column(modifier = modifier.fillMaxSize()) {
-        TopBar(crumbs = if (category != null) listOf(category.name) else if (searchQuery != null) listOf("Busca: $searchQuery") else crumbs, onBack = onBack, onCrumbClick = { vm.goUp() })
+        TopBar(
+            crumbs = if (category != null) listOf(category.name) else if (searchQuery != null) listOf("Busca: $searchQuery") else crumbs,
+            onBack = onBack,
+            onCrumbClick = { vm.goUp() },
+            onCompress = { onCompressFolder(currentPath.location) },
+        )
         if (error != null) {
             Text(error!!, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
         } else if (shownEntries.isEmpty()) {
@@ -201,12 +208,22 @@ fun BrowserScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(crumbs: List<String>, onBack: () -> Unit, onCrumbClick: (Int) -> Unit) {
+private fun TopBar(
+    crumbs: List<String>,
+    onBack: () -> Unit,
+    onCrumbClick: (Int) -> Unit,
+    onCompress: () -> Unit,
+) {
     TopAppBar(
         title = { BreadcrumbBar(breadcrumbs = crumbs, onCrumbClick = onCrumbClick) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar")
+            }
+        },
+        actions = {
+            IconButton(onClick = onCompress) {
+                Icon(Icons.Filled.FolderZip, contentDescription = "Compactar esta pasta")
             }
         },
     )

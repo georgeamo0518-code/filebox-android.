@@ -21,6 +21,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
+import dev.yourname.filebox.data.ops.ZipTools
+import dev.yourname.filebox.ui.home.TextEditorScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,13 +55,26 @@ class MainActivity : ComponentActivity() {
                 var current by remember { mutableStateOf<FileRef?>(null) }
                 var selectedCategory by remember { mutableStateOf<FileCategory?>(null) }
                 var searchQuery by remember { mutableStateOf<String?>(null) }
+                var editing by remember { mutableStateOf<FileEntry?>(null) }
+                var extracting by remember { mutableStateOf<FileEntry?>(null) }
+                var extractPath by remember { mutableStateOf("") }
+                val scope = rememberCoroutineScope()
                 val openFile: (FileEntry) -> Unit = { entry ->
-                    if (!Intents.open(this@MainActivity, entry)) {
-                        Toast.makeText(this@MainActivity, "Nenhum aplicativo encontrado para abrir este arquivo", Toast.LENGTH_LONG).show()
+                    when {
+                        entry.extension in setOf("txt", "md", "log", "csv", "json", "xml", "html", "rtf", "ini", "properties", "yaml", "yml", "sql", "sh", "bat", "gradle", "kt", "java", "js", "css") -> editing = entry
+                        entry.extension == "zip" -> {
+                            extracting = entry
+                            extractPath = File(entry.location).parent ?: Environment.getExternalStorageDirectory().absolutePath
+                        }
+                        !Intents.open(this@MainActivity, entry) -> {
+                            Toast.makeText(this@MainActivity, "Nenhum aplicativo encontrado para abrir este arquivo", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    if (!hasStorageAccess) {
+                    if (editing != null) {
+                        TextEditorScreen(entry = editing!!, onBack = { editing = null })
+                    } else if (!hasStorageAccess) {
                         StoragePermissionScreen(onGrant = ::openStorageSettings)
                     } else if (current != null) {
                         BrowserScreen(
@@ -63,6 +84,14 @@ class MainActivity : ComponentActivity() {
                             onOpenFile = openFile,
                             category = selectedCategory,
                             searchQuery = searchQuery,
+                            onCompressFolder = { path ->
+                                scope.launch {
+                                    val result = ZipTools.compress(File(path))
+                                    Toast.makeText(this@MainActivity,
+                                        result.fold({ "ZIP criado: ${it.name}" }, { it.message ?: "Erro ao compactar" }),
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            },
                         )
                     } else {
                         HomeScreen(
@@ -83,6 +112,36 @@ class MainActivity : ComponentActivity() {
                             onOpenFile = openFile,
                         )
                     }
+                }
+                extracting?.let { selected ->
+                    AlertDialog(
+                        onDismissRequest = { extracting = null },
+                        title = { Text("Extrair ZIP") },
+                        text = {
+                            OutlinedTextField(
+                                value = extractPath,
+                                onValueChange = { extractPath = it },
+                                label = { Text("Pasta de destino") },
+                                singleLine = true,
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val zip = File(selected.location)
+                                val target = File(extractPath)
+                                extracting = null
+                                scope.launch {
+                                    val result = ZipTools.extract(zip, target)
+                                    Toast.makeText(this@MainActivity,
+                                        result.fold({ "Extraídos ${it} arquivos" }, { it.message ?: "Erro ao extrair" }),
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            }) { Text("Extrair") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { extracting = null }) { Text("Cancelar") }
+                        }
+                    )
                 }
             }
         }
