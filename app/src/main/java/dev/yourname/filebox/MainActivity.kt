@@ -2,7 +2,9 @@ package dev.yourname.filebox
 
 import android.content.ActivityNotFoundException
 import android.os.Bundle
+import android.os.Environment
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.yourname.filebox.domain.FileRef
+import dev.yourname.filebox.domain.FileCategory
+import dev.yourname.filebox.domain.FileEntry
+import dev.yourname.filebox.platform.Intents
 import dev.yourname.filebox.platform.PermissionManager
 import dev.yourname.filebox.ui.home.BrowserScreen
 import dev.yourname.filebox.ui.home.HomeScreen
@@ -40,6 +45,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             FileboxTheme {
                 var current by remember { mutableStateOf<FileRef?>(null) }
+                var selectedCategory by remember { mutableStateOf<FileCategory?>(null) }
+                var searchQuery by remember { mutableStateOf<String?>(null) }
+                val openFile: (FileEntry) -> Unit = { entry ->
+                    if (!Intents.open(this@MainActivity, entry)) {
+                        Toast.makeText(this@MainActivity, "Nenhum aplicativo encontrado para abrir este arquivo", Toast.LENGTH_LONG).show()
+                    }
+                }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (!hasStorageAccess) {
                         StoragePermissionScreen(onGrant = ::openStorageSettings)
@@ -47,12 +59,28 @@ class MainActivity : ComponentActivity() {
                         BrowserScreen(
                             container = container,
                             initial = current!!,
-                            onBack = { current = null },
+                            onBack = { current = null; selectedCategory = null; searchQuery = null },
+                            onOpenFile = openFile,
+                            category = selectedCategory,
+                            searchQuery = searchQuery,
                         )
                     } else {
                         HomeScreen(
                             container = container,
                             onOpenFolder = { current = it },
+                            onOpenCategory = {
+                                selectedCategory = it
+                                searchQuery = null
+                                current = container.volumes.primary()?.root
+                                    ?: FileRef.Path(Environment.getExternalStorageDirectory().absolutePath)
+                            },
+                            onSearch = {
+                                searchQuery = it
+                                selectedCategory = null
+                                current = container.volumes.primary()?.root
+                                    ?: FileRef.Path(Environment.getExternalStorageDirectory().absolutePath)
+                            },
+                            onOpenFile = openFile,
                         )
                     }
                 }

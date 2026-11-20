@@ -1,6 +1,7 @@
 package dev.yourname.filebox.ui.home
 
 import androidx.compose.foundation.layout.*
+import android.os.Environment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,6 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.first
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -21,12 +26,34 @@ import dev.yourname.filebox.ui.theme.FileboxTheme
 fun HomeScreen(
     container: AppContainer,
     onOpenFolder: (FileRef) -> Unit,
+    onOpenCategory: (FileCategory) -> Unit,
+    onSearch: (String) -> Unit,
+    onOpenFile: (dev.yourname.filebox.domain.FileEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val vm = remember { HomeViewModel(container) }
     val volumes by vm.volumes.collectAsState()
     val counts by vm.counts.collectAsState()
     val recent by vm.recent.collectAsState()
+    var showSearch by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+
+    if (showSearch) {
+        AlertDialog(
+            onDismissRequest = { showSearch = false },
+            title = { Text("Pesquisar arquivos") },
+            text = {
+                OutlinedTextField(
+                    value = searchText, onValueChange = { searchText = it },
+                    singleLine = true, label = { Text("Nome do arquivo") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { if (searchText.isNotBlank()) { onSearch(searchText.trim()); showSearch = false } })
+                )
+            },
+            confirmButton = { TextButton(onClick = { if (searchText.isNotBlank()) { onSearch(searchText.trim()); showSearch = false } }) { Text("Pesquisar") } },
+            dismissButton = { TextButton(onClick = { showSearch = false }) { Text("Cancelar") } }
+        )
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -48,7 +75,7 @@ fun HomeScreen(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
-                    IconButton(onClick = { /* Search screen will be added without changing file access. */ }) {
+                    IconButton(onClick = { showSearch = true }) {
                         Icon(Icons.Filled.Search, contentDescription = "Pesquisar arquivos")
                     }
                 }
@@ -57,7 +84,11 @@ fun HomeScreen(
         item {
             StorageCard(
                 volumes = volumes,
-                onClick = { volumes.firstOrNull { it.id == "primary" }?.root?.let(onOpenFolder) },
+                onClick = {
+                    val root = volumes.firstOrNull { it.id == "primary" }?.root
+                        ?: FileRef.Path(Environment.getExternalStorageDirectory().absolutePath)
+                    onOpenFolder(root)
+                },
             )
         }
         item {
@@ -77,7 +108,7 @@ fun HomeScreen(
                             CategoryTile(
                                 cat = cat,
                                 count = counts[cat] ?: 0,
-                                onClick = { },
+                                onClick = { onOpenCategory(cat) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -99,7 +130,7 @@ fun HomeScreen(
                 }
             }
             items(recent) { entry ->
-                FileRow(entry = entry, onClick = { /* Open action is handled in the browser screen. */ })
+                FileRow(entry = entry, onClick = { if (entry.isDir) onOpenFolder(entry.ref) else onOpenFile(entry) })
             }
         } else {
             item {
@@ -129,27 +160,39 @@ fun BrowserScreen(
     container: AppContainer,
     initial: FileRef,
     onBack: () -> Unit,
+    onOpenFile: (dev.yourname.filebox.domain.FileEntry) -> Unit,
+    category: FileCategory? = null,
+    searchQuery: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    val vm = remember { BrowserViewModel(container, initial) }
+    val vm = remember(initial) { BrowserViewModel(container, initial) }
     val entries by vm.entries.collectAsState()
+    var filteredEntries by remember { mutableStateOf<List<dev.yourname.filebox.domain.FileEntry>?>(null) }
+    LaunchedEffect(category, searchQuery) {
+        filteredEntries = when {
+            category != null -> container.index.category(category, dev.yourname.filebox.domain.SortSpec()).first()
+            !searchQuery.isNullOrBlank() -> container.index.search(searchQuery, dev.yourname.filebox.data.media.SearchFilters())
+            else -> null
+        }
+    }
+    val shownEntries = filteredEntries ?: entries
     val error by vm.error.collectAsState()
     val crumbs = vm.crumbs()
 
     Column(modifier = modifier.fillMaxSize()) {
-        TopBar(crumbs = crumbs, onBack = onBack, onCrumbClick = { i -> vm.refresh(vm.path.value) })
+        TopBar(crumbs = if (category != null) listOf(category.name) else if (searchQuery != null) listOf("Busca: $searchQuery") else crumbs, onBack = onBack, onCrumbClick = { vm.goUp() })
         if (error != null) {
             Text(error!!, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
-        } else if (entries.isEmpty()) {
-            EmptyState("Esta pasta está vazia", modifier = Modifier.fillMaxSize())
+        } else if (shownEntries.isEmpty()) {
+            EmptyState(if (searchQuery != null) "Nenhum arquivo encontrado" else "Esta pasta está vazia", modifier = Modifier.fillMaxSize())
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(entries) { entry ->
-                    FileRow(entry = entry, onClick = { vm.navigateTo(entry) })
+                items(shownEntries) { entry ->
+                    FileRow(entry = entry, onClick = { if (entry.isDir) vm.navigateTo(entry) else onOpenFile(entry) })
                 }
             }
         }

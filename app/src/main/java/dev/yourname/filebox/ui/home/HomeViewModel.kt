@@ -46,11 +46,11 @@ class BrowserViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    init { refresh(initial) }
-
     val settings = container.settings.settings.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), Settings()
+        viewModelScope, SharingStarted.Eagerly, Settings()
     )
+
+    init { refresh(initial) }
 
     fun refresh(ref: FileRef) {
         _path.value = ref

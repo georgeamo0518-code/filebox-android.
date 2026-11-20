@@ -1,6 +1,11 @@
 package dev.yourname.filebox.ui.components
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import java.io.File
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,6 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.video.VideoFrameDecoder
 import dev.yourname.filebox.domain.FileCategory
 import dev.yourname.filebox.domain.FileEntry
 import dev.yourname.filebox.domain.FileKind
@@ -137,6 +150,17 @@ fun FileRow(
         FileKind.Archive -> Triple(Icons.Filled.FolderZip, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.secondaryContainer)
         FileKind.Other -> Triple(Icons.Filled.InsertDriveFile, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.surfaceContainer)
     }
+    val context = LocalContext.current
+    var thumbnailFailed by remember(entry.location) { mutableStateOf(false) }
+    val thumbnailRequest = remember(entry.location, entry.kind) {
+        ImageRequest.Builder(context)
+            .data(Uri.fromFile(File(entry.location)))
+            .apply {
+                if (entry.kind == FileKind.Video) decoderFactory(VideoFrameDecoder.Factory())
+            }
+            .crossfade(true)
+            .build()
+    }
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -146,8 +170,18 @@ fun FileRow(
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(11.dp), color = bg) {
-                Icon(icon, contentDescription = null, modifier = Modifier.padding(10.dp).size(22.dp), tint = tint)
+            if (!entry.isDir && entry.kind in setOf(FileKind.Image, FileKind.Video) && !thumbnailFailed) {
+                AsyncImage(
+                    model = thumbnailRequest,
+                    contentDescription = entry.name,
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(11.dp)),
+                    contentScale = ContentScale.Crop,
+                    onError = { thumbnailFailed = true },
+                )
+            } else {
+                Surface(shape = RoundedCornerShape(11.dp), color = bg) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.padding(10.dp).size(22.dp), tint = tint)
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
